@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Menu, Radio, Play } from "lucide-react";
@@ -24,7 +24,12 @@ const navItems = [
 
 export function Nav() {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { currentSong, isLive } = useNowPlaying();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const scrollToPlayer = () => {
     const heroSection = document.querySelector('#hero-section');
@@ -117,61 +122,71 @@ export function Nav() {
             <Play className="h-3 w-3 text-[#FBC000] opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
           </button>
 
-          {/* Mobile Menu */}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <SheetHeader>
-                <SheetTitle>Menú</SheetTitle>
-              </SheetHeader>
+          {/* Mobile Menu - Only render after mount to avoid hydration mismatch */}
+          {mounted && (
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <SheetHeader>
+                  <SheetTitle>Menú</SheetTitle>
+                </SheetHeader>
 
-              {/* Now Playing in Mobile Menu */}
-              {isLive && currentSong && (
-                <div className="mt-4 p-3 bg-[#D32F2F]/10 rounded-lg border border-[#D32F2F]/30">
-                  <div className="flex items-center gap-3">
-                    {currentSong.albumArt && currentSong.albumArt !== '/images/vinyl-placeholder.svg' ? (
-                      <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                        <Image
-                          src={currentSong.albumArt}
-                          alt="Now playing"
-                          fill
-                          className="object-cover"
-                          sizes="48px"
-                        />
+                {/* Now Playing in Mobile Menu */}
+                {isLive && currentSong && (
+                  <div className="mt-4 p-3 bg-[#D32F2F]/10 rounded-lg border border-[#D32F2F]/30">
+                    <div className="flex items-center gap-3">
+                      {currentSong.albumArt && currentSong.albumArt !== '/images/vinyl-placeholder.svg' ? (
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                          <Image
+                            src={currentSong.albumArt}
+                            alt="Now playing"
+                            fill
+                            className="object-cover"
+                            sizes="48px"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-[#D32F2F]/20 flex items-center justify-center flex-shrink-0">
+                          <Radio className="h-6 w-6 text-[#D32F2F]" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-bold text-[#D32F2F] uppercase">En Vivo</span>
+                        <p className="text-sm font-medium truncate">{currentSong.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{currentSong.artist}</p>
                       </div>
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-[#D32F2F]/20 flex items-center justify-center flex-shrink-0">
-                        <Radio className="h-6 w-6 text-[#D32F2F]" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-[#D32F2F] uppercase">En Vivo</span>
-                      <p className="text-sm font-medium truncate">{currentSong.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{currentSong.artist}</p>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <nav className="flex flex-col space-y-4 mt-8">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className="text-lg font-medium py-2 transition-colors hover:text-[#FBC000]"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </SheetContent>
-          </Sheet>
+                <nav className="flex flex-col space-y-4 mt-8">
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className="text-lg font-medium py-2 transition-colors hover:text-[#FBC000]"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+          )}
+
+          {/* Placeholder for mobile menu button during SSR */}
+          {!mounted && (
+            <Button variant="ghost" size="icon" className="md:hidden" disabled>
+              <Menu className="h-6 w-6" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          )}
         </div>
       </div>
     </nav>

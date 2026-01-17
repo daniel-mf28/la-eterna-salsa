@@ -59,22 +59,41 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Search for the track
-        const query = encodeURIComponent(`artist:${artist} track:${title}`)
-        const searchUrl = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`
+        // Try precise search first
+        let query = encodeURIComponent(`artist:${artist} track:${title}`)
+        let searchUrl = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`
 
-        const response = await fetch(searchUrl, {
+        let response = await fetch(searchUrl, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         })
 
         if (!response.ok) {
+            console.warn(`Spotify search failed: ${response.status}`)
             return NextResponse.json({ imageUrl: null }, { status: 200 })
         }
 
-        const data = await response.json()
-        const track = data?.tracks?.items?.[0]
+        let data = await response.json()
+        let track = data?.tracks?.items?.[0]
+
+        // If no results, try a broader search (just the title)
+        if (!track) {
+            console.log(`No exact match, trying broader search for: ${title}`)
+            query = encodeURIComponent(title)
+            searchUrl = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`
+
+            response = await fetch(searchUrl, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+
+            if (response.ok) {
+                data = await response.json()
+                track = data?.tracks?.items?.[0]
+            }
+        }
 
         if (!track?.album?.images?.length) {
             console.log(`No album art found for: ${artist} - ${title}`)

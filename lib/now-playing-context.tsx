@@ -58,7 +58,7 @@ function toTitleCase(str: string): string {
         .replace(/^./, (char) => char.toUpperCase())
 }
 
-// Parse Shoutcast song title (usually "Artist - Title" format)
+// Parse Shoutcast song title (handles various formats)
 function parseSongTitle(songTitle: string): { title: string; artist: string } {
     if (!songTitle) return { title: 'Sin información', artist: '' }
 
@@ -66,10 +66,32 @@ function parseSongTitle(songTitle: string): { title: string; artist: string } {
 
     for (const sep of separators) {
         if (songTitle.includes(sep)) {
-            const parts = songTitle.split(sep)
-            return {
-                artist: toTitleCase(parts[0].trim()),
-                title: toTitleCase(parts.slice(1).join(sep).trim() || parts[0].trim())
+            const parts = songTitle.split(sep).map(p => p.trim())
+
+            // Handle common patterns from messy Centova data:
+            // Pattern 1: "Station - Artist - Title" (3+ parts)
+            // Pattern 2: "Artist - Title" (2 parts)
+            // Pattern 3: Just "Title" (1 part)
+
+            if (parts.length >= 3) {
+                // Skip first part (likely station name like "Canal De Salsa")
+                // Use second part as artist, rest as title
+                return {
+                    artist: toTitleCase(parts[1]),
+                    title: toTitleCase(parts.slice(2).join(sep))
+                }
+            } else if (parts.length === 2) {
+                // Standard "Artist - Title" format
+                return {
+                    artist: toTitleCase(parts[0]),
+                    title: toTitleCase(parts[1])
+                }
+            } else {
+                // Only one part, use as title
+                return {
+                    title: toTitleCase(parts[0]),
+                    artist: 'Artista Desconocido'
+                }
             }
         }
     }
@@ -162,6 +184,26 @@ export function NowPlayingProvider({ children }: { children: ReactNode }) {
                         ...song,
                         playedAt: formatRelativeTime(song.timestamp)
                     }))
+
+                    // Background fetch album art for songs that don't have it
+                    updated.forEach((song, index) => {
+                        const placeholder = '/images/vinyl-placeholder.svg'
+                        if (!song.albumArt || song.albumArt === placeholder) {
+                            // Fetch in background without blocking
+                            getAlbumArt(song.artist, song.title).then(albumArt => {
+                                if (albumArt && albumArt !== placeholder) {
+                                    // Update this specific song's album art
+                                    setSongHistory(prev => {
+                                        const newHistory = [...prev]
+                                        if (newHistory[index]?.title === song.title && newHistory[index]?.artist === song.artist) {
+                                            newHistory[index] = { ...newHistory[index], albumArt }
+                                        }
+                                        return newHistory
+                                    })
+                                }
+                            })
+                        }
+                    })
 
                     // Update recent songs display (skip first item which is current song)
                     const toDisplay = updated.length > 1 ? updated.slice(1) : getFallbackSongs()

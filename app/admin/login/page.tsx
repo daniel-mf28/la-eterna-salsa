@@ -29,7 +29,7 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      if (data.user) {
+      if (data.user && data.user.email) {
         // Check if user is an admin
         const { data: adminEmail } = await supabase
           .from('admin_emails')
