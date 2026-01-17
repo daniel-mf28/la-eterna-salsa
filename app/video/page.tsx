@@ -20,7 +20,7 @@ export default function VideoPage() {
       .from("site_config")
       .select("value")
       .eq("key", "youtube_playlist_id")
-      .single();
+      .single<{ value: string }>();
 
     if (!error && data) {
       setPlaylistId(data.value);
