@@ -136,7 +136,7 @@ async function seedStickers() {
       throw new Error(`Failed to check existing stickers: ${fetchError.message}`)
     }
 
-    const existingUrls = new Set(existingStickers?.map(s => s.image_url) || [])
+    const existingUrls = new Set(existingStickers?.map((s: any) => s.image_url) || [])
     console.log(`📊 Found ${existingUrls.size} existing stickers in database`)
 
     // Filter out stickers that already exist
@@ -155,7 +155,7 @@ async function seedStickers() {
     // Insert new stickers
     const { data: insertedStickers, error: insertError } = await supabase
       .from('stickers')
-      .insert(stickersToAdd)
+      .insert(stickersToAdd as any)
       .select()
 
     if (insertError) {
@@ -164,7 +164,7 @@ async function seedStickers() {
 
     // Display results
     console.log('✅ Successfully added stickers:\n')
-    insertedStickers?.forEach((sticker, index) => {
+    insertedStickers?.forEach((sticker: any, index) => {
       console.log(`   ${index + 1}. ${sticker.name}`)
     })
 

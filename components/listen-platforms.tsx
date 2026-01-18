@@ -62,10 +62,10 @@ export function ListenPlatformsSection() {
                 if (error) {
                     console.error('Error fetching platforms:', error)
                     setPlatforms(fallbackPlatforms)
-                } else if (data) {
+                } else if (data && Array.isArray(data)) {
                     // Filter out platforms with null or empty URLs
                     const validPlatforms = data.filter(
-                        (platform) => platform.url && platform.url.trim() !== ''
+                        (platform: any) => platform.url && platform.url.trim() !== ''
                     )
                     // Use database data if available, otherwise use fallback
                     setPlatforms(validPlatforms.length > 0 ? validPlatforms : fallbackPlatforms)

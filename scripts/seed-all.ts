@@ -167,11 +167,11 @@ async function seedAll() {
       .from('stickers')
       .select('image_url')
 
-    const existingStickerUrls = new Set(existingStickers?.map(s => s.image_url) || [])
+    const existingStickerUrls = new Set(existingStickers?.map((s: any) => s.image_url) || [])
     const stickersToAdd = DEFAULT_STICKERS.filter(s => !existingStickerUrls.has(s.image_url))
 
     if (stickersToAdd.length > 0) {
-      const { error } = await supabase.from('stickers').insert(stickersToAdd)
+      const { error } = await supabase.from('stickers').insert(stickersToAdd as any)
       if (error) throw new Error(`Stickers: ${error.message}`)
       console.log(`   ✅ Added ${stickersToAdd.length} stickers`)
     } else {
@@ -186,11 +186,11 @@ async function seedAll() {
       .from('djs')
       .select('name')
 
-    const existingDJNames = new Set(existingDJs?.map(d => d.name) || [])
+    const existingDJNames = new Set(existingDJs?.map((d: any) => d.name) || [])
     const djsToAdd = DEFAULT_DJS.filter(d => !existingDJNames.has(d.name))
 
     if (djsToAdd.length > 0) {
-      const { error } = await supabase.from('djs').insert(djsToAdd)
+      const { error } = await supabase.from('djs').insert(djsToAdd as any)
       if (error) throw new Error(`DJs: ${error.message}`)
       console.log(`   ✅ Added ${djsToAdd.length} DJs`)
     } else {
@@ -206,14 +206,14 @@ async function seedAll() {
       .select('name, city')
 
     const existingShoutoutKeys = new Set(
-      existingShoutouts?.map(s => `${s.name}|${s.city}`) || []
+      existingShoutouts?.map((s: any) => `${s.name}|${s.city}`) || []
     )
     const shoutoutsToAdd = DEFAULT_SHOUTOUTS.filter(
       s => !existingShoutoutKeys.has(`${s.name}|${s.city}`)
     )
 
     if (shoutoutsToAdd.length > 0) {
-      const { error } = await supabase.from('shoutouts').insert(shoutoutsToAdd)
+      const { error } = await supabase.from('shoutouts').insert(shoutoutsToAdd as any)
       if (error) throw new Error(`Shoutouts: ${error.message}`)
       console.log(`   ✅ Added ${shoutoutsToAdd.length} shoutouts`)
     } else {
@@ -228,11 +228,11 @@ async function seedAll() {
       .from('platform_links')
       .select('name')
 
-    const existingPlatformNames = new Set(existingPlatforms?.map(p => p.name) || [])
+    const existingPlatformNames = new Set(existingPlatforms?.map((p: any) => p.name) || [])
     const platformsToAdd = DEFAULT_PLATFORMS.filter(p => !existingPlatformNames.has(p.name))
 
     if (platformsToAdd.length > 0) {
-      const { error } = await supabase.from('platform_links').insert(platformsToAdd)
+      const { error } = await supabase.from('platform_links').insert(platformsToAdd as any)
       if (error) throw new Error(`Platform links: ${error.message}`)
       console.log(`   ✅ Added ${platformsToAdd.length} platform links`)
     } else {
@@ -248,7 +248,7 @@ async function seedAll() {
       .select('*', { count: 'exact', head: true })
 
     if (chatCount === 0) {
-      const { error } = await supabase.from('chat_messages').insert(DEFAULT_CHAT_MESSAGES)
+      const { error } = await supabase.from('chat_messages').insert(DEFAULT_CHAT_MESSAGES as any)
       if (error) throw new Error(`Chat messages: ${error.message}`)
       console.log(`   ✅ Added ${DEFAULT_CHAT_MESSAGES.length} chat messages`)
     } else {
@@ -264,7 +264,7 @@ async function seedAll() {
       .upsert({
         key: 'spotify_playlist_id',
         value: '37i9dQZF1DX8XcRJigLxsW' // Salsa playlist
-      })
+      } as any)
 
     if (spotifyError) throw new Error(`Spotify config: ${spotifyError.message}`)
     console.log('   ✅ Spotify playlist configured')
@@ -278,7 +278,7 @@ async function seedAll() {
       .upsert({
         key: 'stream_url',
         value: 'https://solid24.streamupsolutions.com/proxy/cotbkmmk/stream'
-      })
+      } as any)
 
     if (streamError) throw new Error(`Stream URL config: ${streamError.message}`)
     console.log('   ✅ Stream URL configured (Centova Cast)')

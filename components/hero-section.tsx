@@ -18,8 +18,8 @@ export function HeroSection() {
         .eq('key', 'stream_url')
         .single();
 
-      if (!error && data?.value) {
-        setStreamUrl(data.value);
+      if (!error && data && (data as any)?.value) {
+        setStreamUrl((data as any).value);
       }
     };
 

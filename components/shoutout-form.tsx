@@ -60,7 +60,7 @@ export function ShoutoutForm() {
         country: formData.country,
         message: formData.message,
         song_request: formData.songRequest || null,
-      });
+      } as any);
 
       if (error) {
         console.error("Error submitting shoutout:", error);

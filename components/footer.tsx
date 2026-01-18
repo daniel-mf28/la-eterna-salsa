@@ -59,9 +59,9 @@ export function Footer() {
                 if (error) {
                     console.error('Error fetching social links:', error)
                     setSocialLinks(fallbackSocialLinks)
-                } else if (data) {
+                } else if (data && Array.isArray(data)) {
                     // Filter out links with empty/null URLs
-                    const validLinks = data.filter(link => link.url && link.url.trim() !== '')
+                    const validLinks = data.filter((link: any) => link.url && link.url.trim() !== '')
                     // Use database data if available, otherwise use fallback
                     setSocialLinks(validLinks.length > 0 ? validLinks : fallbackSocialLinks)
                 } else {

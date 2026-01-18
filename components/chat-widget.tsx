@@ -89,8 +89,8 @@ export function ChatWidget() {
       .order('created_at', { ascending: true })
       .limit(50);
 
-    if (!error && data) {
-      const loadedMessages: Message[] = data.map((msg) => ({
+    if (!error && data && Array.isArray(data)) {
+      const loadedMessages: Message[] = data.map((msg: any) => ({
         id: msg.id,
         username: msg.username,
         content: msg.message || "",
@@ -138,7 +138,7 @@ export function ChatWidget() {
       .insert({
         username,
         message: inputMessage.trim(),
-      });
+      } as any);
 
     if (error) {
       console.error("Error sending message:", error);
@@ -160,7 +160,7 @@ export function ChatWidget() {
         username,
         message: "",
         gif_url: gifUrl,
-      });
+      } as any);
 
     if (error) {
       console.error("Error sending GIF:", error);
@@ -182,7 +182,7 @@ export function ChatWidget() {
         username,
         message: "",
         sticker_url: stickerUrl,
-      });
+      } as any);
 
     if (error) {
       console.error("Error sending sticker:", error);

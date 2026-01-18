@@ -19,14 +19,14 @@ export function SpotifyBentoSection() {
             .eq('key', 'spotify_playlist_ids')
             .single()
 
-        if (!error && data) {
+        if (!error && data && (data as any)?.value) {
             try {
                 // Try parsing as JSON array first
-                const parsed = JSON.parse(data.value)
+                const parsed = JSON.parse((data as any).value)
                 setPlaylistIds(Array.isArray(parsed) ? parsed : [])
             } catch {
                 // Fallback to comma-separated string
-                const ids = data.value
+                const ids = (data as any).value
                     .split(',')
                     .map((id: string) => id.trim())
                     .filter(Boolean)
