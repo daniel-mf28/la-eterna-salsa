@@ -11,6 +11,10 @@ export type Song = {
     albumArt?: string
 }
 
+// Song history cache configuration
+const SONG_HISTORY_KEY = 'song_history'
+const SONG_HISTORY_TTL = 3 * 24 * 60 * 60 * 1000 // 3 days
+
 type NowPlayingContextType = {
     currentSong: Song | null
     recentSongs: Song[]
@@ -110,12 +114,42 @@ function formatRelativeTime(timestamp: number): string {
     return `Hace ${Math.floor(seconds / 3600)} horas`
 }
 
+// Load song history from localStorage
+function loadSongHistory(): Song[] {
+    if (typeof window === 'undefined') return []
+    try {
+        const cached = localStorage.getItem(SONG_HISTORY_KEY)
+        if (!cached) return []
+        const { songs, timestamp } = JSON.parse(cached)
+        if (Date.now() - timestamp > SONG_HISTORY_TTL) {
+            localStorage.removeItem(SONG_HISTORY_KEY)
+            return []
+        }
+        return songs || []
+    } catch {
+        return []
+    }
+}
+
+// Save song history to localStorage
+function saveSongHistory(songs: Song[]): void {
+    if (typeof window === 'undefined') return
+    try {
+        localStorage.setItem(SONG_HISTORY_KEY, JSON.stringify({
+            songs,
+            timestamp: Date.now()
+        }))
+    } catch {
+        // localStorage might be full or disabled
+    }
+}
+
 export function NowPlayingProvider({ children }: { children: ReactNode }) {
     const [currentSong, setCurrentSong] = useState<Song | null>(null)
     const [recentSongs, setRecentSongs] = useState<Song[]>([])
     const [isLive, setIsLive] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
-    const [songHistory, setSongHistory] = useState<Song[]>([])
+    const [songHistory, setSongHistory] = useState<Song[]>(() => loadSongHistory())
 
     useEffect(() => {
         const shoutcastUrl = process.env.NEXT_PUBLIC_SHOUTCAST_URL
@@ -170,7 +204,9 @@ export function NowPlayingProvider({ children }: { children: ReactNode }) {
                     // Add to history using state setter, keeping max 10 songs
                     setSongHistory(prevHistory => {
                         const updated = [newSong, ...prevHistory]
-                        return updated.slice(0, 10)
+                        const sliced = updated.slice(0, 10)
+                        saveSongHistory(sliced)
+                        return sliced
                     })
 
                     setCurrentSong(newSong)
@@ -198,6 +234,7 @@ export function NowPlayingProvider({ children }: { children: ReactNode }) {
                                         if (newHistory[index]?.title === song.title && newHistory[index]?.artist === song.artist) {
                                             newHistory[index] = { ...newHistory[index], albumArt }
                                         }
+                                        saveSongHistory(newHistory)
                                         return newHistory
                                     })
                                 }

@@ -2,7 +2,7 @@
 // Tries: Spotify -> Last.fm -> Placeholder
 
 const CACHE_KEY_PREFIX = 'albumart:'
-const CACHE_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days
+const CACHE_TTL = 3 * 24 * 60 * 60 * 1000 // 3 days
 
 // In-memory cache for current session
 const memoryCache = new Map<string, string>()
