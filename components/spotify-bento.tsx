@@ -48,16 +48,16 @@ export function SpotifyBentoSection() {
     }
 
     return (
-        <section className="py-16 md:py-24">
+        <section className="py-12 md:py-18">
             <div className="container">
-                <div className="mb-12 text-center">
-                    <h2 className="text-3xl md:text-4xl font-bold">
+                <div className="mb-8">
+                    <h2 className="text-2xl md:text-3xl font-bold">
                         {playlistIds.length === 1 ? 'Nuestra Playlist' : 'Nuestras Playlists'}
                     </h2>
-                    <p className="mt-4 text-lg text-muted-foreground">
+                    <p className="mt-2 text-muted-foreground">
                         {playlistIds.length === 1
-                            ? 'Escucha nuestra selección especial en Spotify'
-                            : 'Escucha nuestras selecciones especiales en Spotify'
+                            ? 'Selección especial en Spotify'
+                            : 'Selecciones especiales en Spotify'
                         }
                     </p>
                 </div>

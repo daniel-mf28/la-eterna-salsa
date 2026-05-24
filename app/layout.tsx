@@ -1,12 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat } from "next/font/google";
+import { Inter, DM_Serif_Display, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { NowPlayingProvider } from "@/lib/now-playing-context";
+import { fetchNowPlayingSnapshot } from "@/lib/shoutcast";
 
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const dmSerif = DM_Serif_Display({
+  variable: "--font-dm-serif",
+  subsets: ["latin"],
+  weight: ["400"],
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -34,20 +48,23 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  themeColor: "#D32F2F",
+  themeColor: "#0A3538",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialSnapshot = await fetchNowPlayingSnapshot();
+
   return (
-    <html lang="es" className="overflow-x-hidden">
+    <html lang="es" className="overflow-x-hidden" style={{ backgroundColor: "#FBF1E4" }}>
       <body
-        className={`${montserrat.variable} font-sans antialiased overflow-x-hidden`}
+        className={`${inter.variable} ${dmSerif.variable} ${playfair.variable} font-sans antialiased overflow-x-hidden`}
+        style={{ backgroundColor: "#FBF1E4", color: "#0E1817" }}
       >
-        <NowPlayingProvider>
+        <NowPlayingProvider initialSnapshot={initialSnapshot}>
           {children}
         </NowPlayingProvider>
       </body>

@@ -1,15 +1,13 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { getAlbumArt } from './album-art'
-
-export type Song = {
-    title: string
-    artist: string
-    playedAt: string
-    timestamp: number
-    albumArt?: string
-}
+import {
+    formatRelativeTime,
+    normalizeSongIdentity,
+    type NowPlayingSnapshot,
+    type Song,
+} from './now-playing-shared'
 
 // Song history cache configuration
 const SONG_HISTORY_KEY = 'song_history'
@@ -44,74 +42,9 @@ const getFallbackSongs = (): Song[] => [
     { title: 'Llorarás', artist: 'Oscar D\'León', playedAt: 'Hace 37 min', timestamp: Date.now() - 2220000 },
 ]
 
-// Convert string to title case (capitalize first letter of each word)
-function toTitleCase(str: string): string {
-    return str
-        .toLowerCase()
-        .split(' ')
-        .map(word => {
-            // Don't capitalize small words unless they're the first word
-            const smallWords = ['de', 'del', 'la', 'el', 'y', 'a', 'con', 'en', 'por', 'para']
-            if (smallWords.includes(word)) {
-                return word
-            }
-            return word.charAt(0).toUpperCase() + word.slice(1)
-        })
-        .join(' ')
-        // Always capitalize first letter
-        .replace(/^./, (char) => char.toUpperCase())
-}
-
-// Parse Shoutcast song title (handles various formats)
-function parseSongTitle(songTitle: string): { title: string; artist: string } {
-    if (!songTitle) return { title: 'Sin información', artist: '' }
-
-    const separators = [' - ', ' – ', ' — ', ' | ']
-
-    for (const sep of separators) {
-        if (songTitle.includes(sep)) {
-            const parts = songTitle.split(sep).map(p => p.trim())
-
-            // Handle common patterns from messy Centova data:
-            // Pattern 1: "Station - Artist - Title" (3+ parts)
-            // Pattern 2: "Artist - Title" (2 parts)
-            // Pattern 3: Just "Title" (1 part)
-
-            if (parts.length >= 3) {
-                // Skip first part (likely station name like "Canal De Salsa")
-                // Use second part as artist, rest as title
-                return {
-                    artist: toTitleCase(parts[1]),
-                    title: toTitleCase(parts.slice(2).join(sep))
-                }
-            } else if (parts.length === 2) {
-                // Standard "Artist - Title" format
-                return {
-                    artist: toTitleCase(parts[0]),
-                    title: toTitleCase(parts[1])
-                }
-            } else {
-                // Only one part, use as title
-                return {
-                    title: toTitleCase(parts[0]),
-                    artist: 'Artista Desconocido'
-                }
-            }
-        }
-    }
-
-    return { title: toTitleCase(songTitle.trim()), artist: 'Artista Desconocido' }
-}
-
-// Format relative time in Spanish
-function formatRelativeTime(timestamp: number): string {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000)
-
-    if (seconds < 60) return 'Ahora'
-    if (seconds < 120) return 'Hace 1 min'
-    if (seconds < 3600) return `Hace ${Math.floor(seconds / 60)} min`
-    if (seconds < 7200) return 'Hace 1 hora'
-    return `Hace ${Math.floor(seconds / 3600)} horas`
+function snapshotToHistory(snapshot: NowPlayingSnapshot | null | undefined): Song[] {
+    if (!snapshot?.isLive || !snapshot.currentSong) return []
+    return [snapshot.currentSong, ...snapshot.recentSongs].slice(0, 11)
 }
 
 // Load song history from localStorage
@@ -144,12 +77,71 @@ function saveSongHistory(songs: Song[]): void {
     }
 }
 
-export function NowPlayingProvider({ children }: { children: ReactNode }) {
-    const [currentSong, setCurrentSong] = useState<Song | null>(null)
-    const [recentSongs, setRecentSongs] = useState<Song[]>([])
-    const [isLive, setIsLive] = useState(false)
-    const [isLoading, setIsLoading] = useState(true)
-    const [songHistory, setSongHistory] = useState<Song[]>(() => loadSongHistory())
+function mergeWithExistingAlbumArt(nextSongs: Song[], existingSongs: Song[]): Song[] {
+    const existingByIdentity = new Map(
+        existingSongs.map((song) => [normalizeSongIdentity(song), song])
+    )
+
+    return nextSongs.map((song) => {
+        const existing = existingByIdentity.get(normalizeSongIdentity(song))
+        return existing?.albumArt ? { ...song, albumArt: existing.albumArt } : song
+    })
+}
+
+export function NowPlayingProvider({
+    children,
+    initialSnapshot,
+}: {
+    children: ReactNode
+    initialSnapshot?: NowPlayingSnapshot
+}) {
+    const initialHistory = snapshotToHistory(initialSnapshot)
+
+    const [currentSong, setCurrentSong] = useState<Song | null>(initialSnapshot?.currentSong ?? null)
+    const [recentSongs, setRecentSongs] = useState<Song[]>(initialSnapshot?.recentSongs ?? [])
+    const [isLive, setIsLive] = useState(initialSnapshot?.isLive ?? false)
+    const [isLoading, setIsLoading] = useState(!initialSnapshot)
+    const [songHistory, setSongHistory] = useState<Song[]>(() => {
+        if (initialHistory.length > 0) return initialHistory
+        return loadSongHistory()
+    })
+
+    useEffect(() => {
+        if (!isLive) return
+
+        const updatedHistory = songHistory.map(song => ({
+            ...song,
+            playedAt: formatRelativeTime(song.timestamp)
+        }))
+
+        setCurrentSong(updatedHistory[0] ?? null)
+        setRecentSongs(updatedHistory.slice(1))
+        saveSongHistory(updatedHistory)
+    }, [songHistory, isLive])
+
+    useEffect(() => {
+        if (!isLive || songHistory.length === 0) return
+
+        const placeholder = '/images/vinyl-placeholder.svg'
+
+        songHistory.forEach((song, index) => {
+            if (song.albumArt && song.albumArt !== placeholder) return
+
+            getAlbumArt(song.artist, song.title).then((albumArt) => {
+                if (!albumArt || albumArt === placeholder) return
+
+                setSongHistory((prev) => {
+                    const next = [...prev]
+                    if (!next[index]) return prev
+                    if (normalizeSongIdentity(next[index]) !== normalizeSongIdentity(song)) return prev
+                    if (next[index].albumArt === albumArt) return prev
+
+                    next[index] = { ...next[index], albumArt }
+                    return next
+                })
+            })
+        })
+    }, [songHistory, isLive])
 
     useEffect(() => {
         const shoutcastUrl = process.env.NEXT_PUBLIC_SHOUTCAST_URL
@@ -157,20 +149,18 @@ export function NowPlayingProvider({ children }: { children: ReactNode }) {
 
         if (!shoutcastUrl) {
             console.warn('NEXT_PUBLIC_SHOUTCAST_URL not configured, using fallback songs')
-            // Load album art for fallback songs
             const fallbackSongs = getFallbackSongs()
             loadAlbumArtForSongs(fallbackSongs).then(songsWithArt => {
+                setCurrentSong(null)
                 setRecentSongs(songsWithArt)
+                setIsLive(false)
+                setIsLoading(false)
             })
-            setIsLoading(false)
             return
         }
 
-        let lastSongTitle = ''
-
-        const fetchCurrentSong = async () => {
+        const fetchSnapshot = async () => {
             try {
-                // Use our proxy API route to avoid CORS issues
                 const response = await fetch('/api/now-playing', {
                     cache: 'no-store'
                 })
@@ -180,81 +170,24 @@ export function NowPlayingProvider({ children }: { children: ReactNode }) {
                     throw new Error('Failed to fetch')
                 }
 
-                const data = await response.json()
-                console.log('Centova Cast data:', data)
+                const data: NowPlayingSnapshot = await response.json()
 
-                // Centova Cast v2 returns data in streams array
-                const streamData = data.streams?.[0] || data
-                const songTitle = streamData.songtitle || data.songtitle || data.title || ''
-
-                if (songTitle && songTitle !== lastSongTitle) {
-                    lastSongTitle = songTitle
-                    const parsed = parseSongTitle(songTitle)
-
-                    // Fetch album art for the new song
-                    const albumArt = await getAlbumArt(parsed.artist, parsed.title)
-
-                    const newSong: Song = {
-                        ...parsed,
-                        playedAt: 'Ahora',
-                        timestamp: Date.now(),
-                        albumArt
-                    }
-
-                    // Add to history using state setter, keeping max 10 songs
-                    setSongHistory(prevHistory => {
-                        const updated = [newSong, ...prevHistory]
-                        const sliced = updated.slice(0, 10)
-                        saveSongHistory(sliced)
-                        return sliced
-                    })
-
-                    setCurrentSong(newSong)
+                if (data.isLive && data.currentSong) {
                     setIsLive(true)
-                }
-
-                // Update recent songs from history (excluding current song)
-                // If we have no history yet, use fallback songs
-                setSongHistory(prevHistory => {
-                    const updated = prevHistory.map(song => ({
-                        ...song,
-                        playedAt: formatRelativeTime(song.timestamp)
-                    }))
-
-                    // Background fetch album art for songs that don't have it
-                    updated.forEach((song, index) => {
-                        const placeholder = '/images/vinyl-placeholder.svg'
-                        if (!song.albumArt || song.albumArt === placeholder) {
-                            // Fetch in background without blocking
-                            getAlbumArt(song.artist, song.title).then(albumArt => {
-                                if (albumArt && albumArt !== placeholder) {
-                                    // Update this specific song's album art
-                                    setSongHistory(prev => {
-                                        const newHistory = [...prev]
-                                        if (newHistory[index]?.title === song.title && newHistory[index]?.artist === song.artist) {
-                                            newHistory[index] = { ...newHistory[index], albumArt }
-                                        }
-                                        saveSongHistory(newHistory)
-                                        return newHistory
-                                    })
-                                }
-                            })
-                        }
+                    setSongHistory((prevHistory) => {
+                        const nextHistory = mergeWithExistingAlbumArt(snapshotToHistory(data), prevHistory).slice(0, 11)
+                        saveSongHistory(nextHistory)
+                        return nextHistory
                     })
-
-                    // Update recent songs display (skip first item which is current song)
-                    const toDisplay = updated.length > 1 ? updated.slice(1) : getFallbackSongs()
-                    setRecentSongs(toDisplay)
-
-                    return updated
-                })
-
+                } else {
+                    throw new Error('No live song available')
+                }
             } catch (error) {
-                // Shoutcast not available, use fallback
                 console.error('Error fetching now playing:', error)
                 setIsLive(false)
                 const fallbackSongs = getFallbackSongs()
                 loadAlbumArtForSongs(fallbackSongs).then(songsWithArt => {
+                    setCurrentSong(null)
                     setRecentSongs(songsWithArt)
                 })
             } finally {
@@ -262,11 +195,8 @@ export function NowPlayingProvider({ children }: { children: ReactNode }) {
             }
         }
 
-        // Initial fetch
-        fetchCurrentSong()
-
-        // Poll every 45 seconds for song updates
-        const interval = setInterval(fetchCurrentSong, 45000)
+        fetchSnapshot()
+        const interval = setInterval(fetchSnapshot, 45000)
 
         return () => clearInterval(interval)
     }, [])

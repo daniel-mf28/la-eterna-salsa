@@ -3,10 +3,7 @@ import { HeroSection } from "@/components/hero-section";
 import { RecentSongsSection } from "@/components/recent-songs";
 import { CommunitySection } from "@/components/community-section";
 import { ShoutoutsCarousel } from "@/components/shoutouts-carousel";
-import { DJTeamSection } from "@/components/dj-team";
-import { SpotifyBentoSection } from "@/components/spotify-bento";
-import { ListenPlatformsSection } from "@/components/listen-platforms";
-import { FAQSection } from "@/components/faq-section";
+import { BottomSection } from "@/components/bottom-section";
 import { Footer } from "@/components/footer";
 
 export default function Home() {
@@ -15,13 +12,13 @@ export default function Home() {
       <Nav />
       <main className="flex-1">
         <HeroSection />
-        <RecentSongsSection />
-        <CommunitySection />
-        <ShoutoutsCarousel />
-        <DJTeamSection />
-        <SpotifyBentoSection />
-        <ListenPlatformsSection />
-        <FAQSection />
+        {/* Content sections — gap 24px matching design contentWrap */}
+        <div className="flex flex-col items-center gap-4 md:gap-6 py-3 md:py-4">
+          <RecentSongsSection />
+          <CommunitySection />
+          <ShoutoutsCarousel />
+          <BottomSection />
+        </div>
       </main>
       <Footer />
     </div>

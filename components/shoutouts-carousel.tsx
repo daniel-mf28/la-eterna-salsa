@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Heart, Music } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import type { Database } from "@/lib/database.types";
-import { useDragScroll } from "@/lib/use-drag-scroll";
 
 type ShoutoutRow = Database["public"]["Tables"]["shoutouts"]["Row"];
 
@@ -22,7 +18,6 @@ interface Shoutout {
   createdAt: string;
 }
 
-// Fallback shoutouts when database is empty or not configured
 const FALLBACK_SHOUTOUTS: Shoutout[] = [
   {
     id: "fallback-1",
@@ -54,6 +49,15 @@ const FALLBACK_SHOUTOUTS: Shoutout[] = [
     approved: true,
     createdAt: new Date().toISOString(),
   },
+  {
+    id: "fallback-4",
+    name: "Ana Lucia Perez",
+    city: "Bogotá",
+    country: "Colombia",
+    message: "Para mis amigas del grupo de baile. Las quiero mucho!",
+    approved: true,
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 function mapShoutoutToDisplay(shoutout: ShoutoutRow): Shoutout {
@@ -69,17 +73,33 @@ function mapShoutoutToDisplay(shoutout: ShoutoutRow): Shoutout {
   };
 }
 
+function formatTimeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return "Ahora";
+  if (diffMins < 60) return `Hace ${diffMins} min`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+}
+
 export function ShoutoutsCarousel() {
   const [shoutouts, setShoutouts] = useState<Shoutout[]>(FALLBACK_SHOUTOUTS);
   const [isLoading, setIsLoading] = useState(true);
-  const scrollRef = useDragScroll<HTMLDivElement>();
+  const [formName, setFormName] = useState("");
+  const [formLocation, setFormLocation] = useState("");
+  const [formMessage, setFormMessage] = useState("");
+  const [formSong, setFormSong] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   useEffect(() => {
     const fetchApprovedShoutouts = async () => {
       try {
         const supabase = createClient();
-
-        // Fetch approved shoutouts, ordered by creation date (newest first)
         const { data, error } = await supabase
           .from("shoutouts")
           .select("*")
@@ -88,19 +108,15 @@ export function ShoutoutsCarousel() {
           .limit(10);
 
         if (error) {
-          console.error("Error fetching shoutouts:", error);
-          // Keep fallback shoutouts on error
           setIsLoading(false);
           return;
         }
 
-        // If we have data, use it; otherwise keep fallback
         if (data && data.length > 0) {
           setShoutouts(data.map(mapShoutoutToDisplay));
         }
-      } catch (error) {
-        console.error("Error in fetchApprovedShoutouts:", error);
-        // Keep fallback shoutouts on error
+      } catch {
+        // Keep fallback shoutouts
       } finally {
         setIsLoading(false);
       }
@@ -108,7 +124,6 @@ export function ShoutoutsCarousel() {
 
     fetchApprovedShoutouts();
 
-    // Subscribe to real-time updates for approved shoutouts
     const supabase = createClient();
     const channel = supabase
       .channel("approved_shoutouts")
@@ -120,10 +135,7 @@ export function ShoutoutsCarousel() {
           table: "shoutouts",
           filter: "approved=eq.true",
         },
-        () => {
-          // Refetch when changes occur
-          fetchApprovedShoutouts();
-        }
+        () => fetchApprovedShoutouts()
       )
       .subscribe();
 
@@ -132,88 +144,168 @@ export function ShoutoutsCarousel() {
     };
   }, []);
 
-  // Don't render if still loading and no fallback data
-  if (isLoading && shoutouts.length === 0) {
-    return null;
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim() || !formMessage.trim()) return;
 
-  // Don't render section if no shoutouts at all
-  if (shoutouts.length === 0) {
+    setIsSubmitting(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("shoutouts").insert({
+        name: formName.trim(),
+        city: formLocation.trim() || null,
+        country: null,
+        message: formMessage.trim(),
+        song_request: formSong.trim() || null,
+        approved: false,
+      } as never);
+
+      if (!error) {
+        setFormName("");
+        setFormLocation("");
+        setFormMessage("");
+        setFormSong("");
+        setSubmitSuccess(true);
+        setTimeout(() => setSubmitSuccess(false), 3000);
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if ((isLoading && shoutouts.length === 0) || shoutouts.length === 0) {
     return null;
   }
 
   return (
-    <section className="py-12 md:py-16 bg-gradient-to-b from-background to-card/20">
-      <div className="container">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Saludos y Dedicatorias
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Comparte tu mensaje con la comunidad salsera
-          </p>
-        </div>
-
-        {/* Carousel */}
+    <section className="w-full px-4 md:px-6">
+      <div className="max-w-[1398px] mx-auto">
         <div
-          ref={scrollRef}
-          className="relative overflow-x-auto mb-8 pb-4 hide-scrollbar"
+          className="rounded-2xl md:rounded-3xl p-5 md:px-12 md:py-10"
+          style={{
+            background: "#FBF1E4",
+            boxShadow: "0 4px 20px rgba(10, 53, 56, 0.15)",
+          }}
         >
-          <div className="flex gap-6 w-max">
-            {shoutouts.map((shoutout, index) => (
-              <Card
-                key={`${shoutout.id}-${index}`}
-                className="flex-shrink-0 w-[350px] bg-card/50 backdrop-blur border-border/50 hover:border-brand-orange/50 transition-all duration-300"
-              >
-                <CardContent className="p-6 space-y-4">
-                  {/* Header with name and location */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-bold text-lg text-brand-orange">
-                        {shoutout.name}
-                      </h3>
-                      {(shoutout.city || shoutout.country) && (
-                        <p className="text-sm text-muted-foreground">
-                          {[shoutout.city, shoutout.country]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
-                      )}
+          <div className="flex flex-col md:flex-row gap-6 md:gap-10">
+            {/* Left: Shoutouts List */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-sans text-[14px] font-extrabold tracking-wider text-[#C2491F] uppercase mb-5">
+                Saludos y Dedicatorias
+              </h3>
+
+              <div className="space-y-0">
+                {shoutouts.slice(0, 4).map((shoutout, index) => (
+                  <div
+                    key={`${shoutout.id}-${index}`}
+                    className={`flex items-start gap-3 pb-3 pt-3 first:pt-0 ${
+                      index < 3 ? "border-b border-[#C7C0AF]/40" : ""
+                    }`}
+                  >
+                    {/* Avatar */}
+                    <div className="w-[36px] h-[36px] rounded-full bg-[#FAD09F] flex-shrink-0 flex items-center justify-center">
+                      <span className="text-[#0A3538] text-[12px] font-bold">
+                        {shoutout.name.charAt(0).toUpperCase()}
+                      </span>
                     </div>
-                    <Heart className="h-5 w-5 text-brand-coral fill-brand-coral" />
-                  </div>
 
-                  {/* Message */}
-                  <p className="text-foreground leading-relaxed line-clamp-4">
-                    {shoutout.message}
-                  </p>
-
-                  {/* Song Request */}
-                  {shoutout.songRequest && (
-                    <div className="flex items-start gap-2 pt-2 border-t border-border/50">
-                      <Music className="h-4 w-4 text-brand-orange shrink-0 mt-0.5" />
-                      <p className="text-sm text-muted-foreground italic">
-                        {shoutout.songRequest}
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-sans text-[13px] font-bold text-[#0A3538]">
+                          {shoutout.name}
+                        </span>
+                        {shoutout.city && (
+                          <span className="font-sans text-[12px] text-[#5B7368]">
+                            desde {shoutout.city}
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-sans text-sm text-[#5B7368] mt-0.5 line-clamp-1">
+                        {shoutout.message}
                       </p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
 
-        {/* CTA Button */}
-        <div className="text-center">
-          <Link href="/shoutout">
-            <Button
-              size="lg"
-              className="bg-brand-orange hover:bg-brand-orange/90 text-white text-lg px-8 py-6 h-auto"
-            >
-              Deja Tu Saludo
-            </Button>
-          </Link>
+                    {/* Timestamp */}
+                    <span className="font-sans text-xs text-[#5B7368]/60 flex-shrink-0 mt-1">
+                      {formatTimeAgo(shoutout.createdAt)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden md:block w-px bg-[#C7C0AF]/30 self-stretch" />
+            <div className="block md:hidden h-px bg-[#C7C0AF]/30 my-6" />
+
+            {/* Right: Submission Form */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-sans text-[14px] font-extrabold tracking-wider text-[#0E1817] uppercase mb-5">
+                Deja Tu Saludo o Dedicatoria
+              </h3>
+
+              {submitSuccess ? (
+                <div className="flex items-center justify-center h-48">
+                  <p className="font-sans text-sm text-[#5B7368] text-center">
+                    Tu saludo fue enviado y será publicado pronto.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      placeholder="Tu nombre"
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                      required
+                      className="flex-1 h-12 px-3 rounded-md border border-[#C7C0AF] bg-white font-sans text-[14px] text-[#0A3538] placeholder:text-[#5B7368]/50 focus:outline-none focus:ring-2 focus:ring-[#C2491F]/30"
+                    />
+                    <input
+                      type="text"
+                      placeholder="¿Desde dónde nos escuchas?"
+                      value={formLocation}
+                      onChange={(e) => setFormLocation(e.target.value)}
+                      className="flex-1 h-12 px-3 rounded-md border border-[#C7C0AF] bg-white font-sans text-[14px] text-[#0A3538] placeholder:text-[#5B7368]/50 focus:outline-none focus:ring-2 focus:ring-[#C2491F]/30"
+                    />
+                  </div>
+                  <div className="relative">
+                    <textarea
+                      placeholder="Tu saludo o dedicatoria (máx. 160 caracteres)"
+                      value={formMessage}
+                      onChange={(e) =>
+                        setFormMessage(e.target.value.slice(0, 160))
+                      }
+                      required
+                      className="w-full h-[120px] px-3 py-3 rounded-md border border-[#C7C0AF] bg-white font-sans text-[14px] text-[#0A3538] placeholder:text-[#5B7368]/50 resize-none focus:outline-none focus:ring-2 focus:ring-[#C2491F]/30"
+                    />
+                    <span className="absolute bottom-2 right-3 font-sans text-xs text-[#5B7368]/60">
+                      {formMessage.length}/160
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="🎵 Canción que te gustaría escuchar (opcional)"
+                    value={formSong}
+                    onChange={(e) => setFormSong(e.target.value)}
+                    maxLength={200}
+                    className="w-full h-12 px-3 rounded-md border border-[#C7C0AF] bg-white font-sans text-[14px] text-[#0A3538] placeholder:text-[#5B7368]/50 focus:outline-none focus:ring-2 focus:ring-[#C2491F]/30"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-2 h-12 px-6 rounded-md bg-[#C2491F] text-white font-sans text-[14px] font-bold tracking-wider uppercase hover:bg-[#C2491F]/90 transition-colors disabled:opacity-50"
+                  >
+                    {isSubmitting ? "Enviando..." : "Enviar Saludo"}
+                    {!isSubmitting && <ArrowRight className="w-4 h-4" />}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </section>
