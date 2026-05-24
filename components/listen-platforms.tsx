@@ -88,23 +88,13 @@ export function ListenPlatformsSection() {
     }
 
     return (
-        <section className="py-16 md:py-24 bg-card/30 relative overflow-hidden">
-            {/* Subtle gradient accent */}
-            <div
-                className="absolute inset-0 z-0 pointer-events-none"
-                style={{
-                    backgroundImage: `
-                        radial-gradient(circle at 80% 20%, rgba(242, 95, 76, 0.07) 0%, transparent 40%),
-                        radial-gradient(circle at 20% 80%, rgba(229, 49, 112, 0.05) 0%, transparent 35%)
-                    `,
-                }}
-            />
-            <div className="container relative z-10">
-                <div className="space-y-8 text-center">
+        <section className="py-14 md:py-20 bg-card/30">
+            <div className="container">
+                <div className="space-y-6">
                     <div>
-                        <h2 className="text-3xl md:text-4xl font-bold">Escuchar Radio Salsa en Vivo Gratis</h2>
-                        <p className="mt-4 text-lg text-muted-foreground">
-                            Encuéntranos en las mejores plataformas para escuchar emisoras de salsa online
+                        <h2 className="text-2xl md:text-3xl font-bold">Escúchanos en Otras Plataformas</h2>
+                        <p className="mt-2 text-muted-foreground">
+                            También puedes encontrarnos aquí
                         </p>
                     </div>
 

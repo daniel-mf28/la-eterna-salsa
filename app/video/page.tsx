@@ -57,7 +57,7 @@ export default function VideoPage() {
         <section className="flex-1 bg-black">
           <div className="container h-full py-4 md:py-8">
             <div className="h-full flex flex-col">
-              <h1 className="text-2xl md:text-3xl font-bold mb-4 text-center bg-gradient-to-r from-[#FBC000] to-[#D32F2F] bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-3xl font-bold mb-4 text-center text-[#FBC000]">
                 La Eterna Salsa - En Vivo
               </h1>
 

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
+
+import { createClient, isSupabaseConfigured } from '@/lib/supabase'
 
 interface FAQ {
     id: string
@@ -52,6 +52,11 @@ export function FAQSection() {
 
     useEffect(() => {
         async function fetchFAQs() {
+            if (!isSupabaseConfigured()) {
+                setFaqItems(fallbackFAQs)
+                setIsLoading(false)
+                return
+            }
             try {
                 const supabase = createClient()
                 const { data, error } = await supabase
@@ -79,21 +84,21 @@ export function FAQSection() {
     }, [])
 
     return (
-        <section className="py-16 md:py-24">
+        <section className="py-14 md:py-20">
             <div className="container">
                 <div className="grid gap-8 md:grid-cols-5 md:gap-12">
                     <div className="md:col-span-2">
-                        <h2 className="text-3xl md:text-4xl font-bold">Preguntas Frecuentes</h2>
-                        <p className="text-muted-foreground mt-4 text-balance text-lg">
+                        <h2 className="text-2xl md:text-3xl font-bold">Preguntas Frecuentes</h2>
+                        <p className="text-muted-foreground mt-3">
                             Lo que necesitas saber
                         </p>
-                        <p className="text-muted-foreground mt-6 hidden md:block">
-                            ¿No encuentras lo que buscas? Contáctanos a través de{' '}
-                            <Link
-                                href="/contacto"
+                        <p className="text-muted-foreground mt-4 hidden md:block text-sm">
+                            ¿No encuentras lo que buscas?{' '}
+                            <a
+                                href="mailto:contacto@laeternasalsa.com"
                                 className="text-[#ff8906] font-medium hover:underline">
-                                nuestra página de contacto
-                            </Link>
+                                Escríbenos
+                            </a>
                         </p>
                     </div>
 
@@ -122,13 +127,13 @@ export function FAQSection() {
                         )}
                     </div>
 
-                    <p className="text-muted-foreground mt-6 md:hidden">
-                        ¿No encuentras lo que buscas? Contáctanos a través de{' '}
-                        <Link
-                            href="/contacto"
+                    <p className="text-muted-foreground mt-4 md:hidden text-sm">
+                        ¿No encuentras lo que buscas?{' '}
+                        <a
+                            href="mailto:contacto@laeternasalsa.com"
                             className="text-[#ff8906] font-medium hover:underline">
-                            nuestra página de contacto
-                        </Link>
+                            Escríbenos
+                        </a>
                     </p>
                 </div>
             </div>
