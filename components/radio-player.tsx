@@ -1,11 +1,10 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   Play,
   Pause,
-  SkipBack,
-  SkipForward,
   Volume1,
   Volume2,
   VolumeX,
@@ -16,6 +15,21 @@ import { useRadio } from "@/lib/radio-context";
 
 export function RadioPlayer() {
   const { state, isPlaying, isLoading, volume, isMuted, togglePlay, setVolume, setIsMuted } = useRadio();
+  const [showVolume, setShowVolume] = useState(false);
+  const volumeRef = useRef<HTMLDivElement>(null);
+
+  // Close volume popup on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (volumeRef.current && !volumeRef.current.contains(e.target as Node)) {
+        setShowVolume(false);
+      }
+    }
+    if (showVolume) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [showVolume]);
   const { currentSong } = useNowPlaying();
 
   const hasAlbumArt =
@@ -120,18 +134,46 @@ export function RadioPlayer() {
 
         {/* Controls */}
         <div className="flex items-center justify-center gap-4 sm:gap-6">
-          <button
-            onClick={() => setIsMuted(!isMuted)}
-            className="hidden sm:block text-[#0A3538] hover:text-[#C2491F] transition-colors"
-            aria-label={isMuted ? "Activar sonido" : "Silenciar"}
-          >
-            {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume1 className="h-[18px] w-[18px]" />}
-          </button>
+          {/* Volume button + slider */}
+          <div className="relative" ref={volumeRef}>
+            <button
+              onClick={() => setShowVolume(!showVolume)}
+              className="text-[#0A3538] hover:text-[#C2491F] transition-colors"
+              aria-label={isMuted ? "Activar sonido" : "Ajustar volumen"}
+            >
+              {isMuted || volume === 0 ? (
+                <VolumeX className="h-[20px] w-[20px]" />
+              ) : volume < 0.5 ? (
+                <Volume1 className="h-[20px] w-[20px]" />
+              ) : (
+                <Volume2 className="h-[20px] w-[20px]" />
+              )}
+            </button>
 
-          <button className="text-[#0A3538] hover:text-[#C2491F] transition-colors" aria-label="Anterior">
-            <SkipBack className="h-[22px] w-[22px]" />
-          </button>
+            {/* Volume slider popup */}
+            {showVolume && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#0A3538] rounded-lg px-3 py-2.5 shadow-lg flex flex-col items-center gap-1.5">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={isMuted ? 0 : volume}
+                  onChange={handleVolumeChange}
+                  className="w-24 h-1 accent-[#C2491F] cursor-pointer"
+                  aria-label="Volumen"
+                />
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  className="text-[10px] text-white/70 hover:text-white transition-colors"
+                >
+                  {isMuted ? "Activar" : "Silenciar"}
+                </button>
+              </div>
+            )}
+          </div>
 
+          {/* Play/Pause */}
           <button
             onClick={togglePlay}
             disabled={isLoading}
@@ -145,17 +187,6 @@ export function RadioPlayer() {
             ) : (
               <Play className="h-5 w-5 ml-0.5" />
             )}
-          </button>
-
-          <button className="text-[#0A3538] hover:text-[#C2491F] transition-colors" aria-label="Siguiente">
-            <SkipForward className="h-[22px] w-[22px]" />
-          </button>
-
-          <button
-            className="hidden sm:block text-[#0A3538] hover:text-[#C2491F] transition-colors"
-            aria-label="Volumen alto"
-          >
-            <Volume2 className="h-[18px] w-[18px]" />
           </button>
         </div>
 

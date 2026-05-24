@@ -80,7 +80,7 @@ export function RecentSongsSection() {
 
                         {isLoading ? (
                             <div className="flex gap-4">
-                                {Array.from({ length: 5 }).map((_, i) => (
+                                {Array.from({ length: 7 }).map((_, i) => (
                                     <div key={i} className="flex-1 min-w-0 animate-pulse">
                                         <div className="aspect-square rounded-lg bg-[#C7C0AF]/30 mb-2" />
                                         <div className="h-3 bg-[#C7C0AF]/30 rounded w-3/4 mb-1" />
@@ -90,7 +90,7 @@ export function RecentSongsSection() {
                             </div>
                         ) : (
                             <div className="flex gap-4 overflow-x-auto hide-scrollbar">
-                                {recentSongs.slice(0, 5).map((song, index) => (
+                                {recentSongs.slice(0, 7).map((song, index) => (
                                     <div
                                         key={`${song.title}-${index}`}
                                         className="flex-shrink-0 w-[80px] md:w-[120px]"
