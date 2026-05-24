@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { RadioPlayer } from "./radio-player";
 import { ChatWidget } from "./chat-widget";
+import { RadioProvider } from "@/lib/radio-context";
 import { createClient } from "@/lib/supabase";
 
 export function HeroSection() {
@@ -28,6 +29,7 @@ export function HeroSection() {
   }, []);
 
   return (
+    <RadioProvider streamUrl={streamUrl}>
     <section id="hero-section" className="relative w-full overflow-hidden">
       {/* Background Image */}
       <div
@@ -104,7 +106,7 @@ export function HeroSection() {
               boxShadow: "0 6px 24px rgba(10, 53, 56, 0.19)",
             }}
           >
-            <RadioPlayer streamUrl={streamUrl} />
+            <RadioPlayer />
           </div>
         </div>
 
@@ -164,7 +166,7 @@ export function HeroSection() {
               boxShadow: "0 6px 24px rgba(10, 53, 56, 0.19)",
             }}
           >
-            <RadioPlayer streamUrl={streamUrl} />
+            <RadioPlayer />
           </div>
         </div>
       </div>
@@ -197,7 +199,7 @@ export function HeroSection() {
               boxShadow: "0 6px 24px rgba(10, 53, 56, 0.19)",
             }}
           >
-            <RadioPlayer streamUrl={streamUrl} />
+            <RadioPlayer />
           </div>
         </div>
       </div>
@@ -217,5 +219,6 @@ export function HeroSection() {
         </div>
       </div>
     </section>
+    </RadioProvider>
   );
 }

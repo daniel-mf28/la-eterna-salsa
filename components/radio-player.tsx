@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   Play,
@@ -13,78 +12,15 @@ import {
   Loader2,
 } from "lucide-react";
 import { useNowPlaying } from "@/lib/now-playing-context";
+import { useRadio } from "@/lib/radio-context";
 
-type PlayerState = "stopped" | "loading" | "playing" | "error";
-
-interface RadioPlayerProps {
-  streamUrl?: string;
-}
-
-export function RadioPlayer({
-  streamUrl = "https://example.com/stream",
-}: RadioPlayerProps) {
-  const [state, setState] = useState<PlayerState>("stopped");
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+export function RadioPlayer() {
+  const { state, isPlaying, isLoading, volume, isMuted, togglePlay, setVolume, setIsMuted } = useRadio();
   const { currentSong } = useNowPlaying();
 
   const hasAlbumArt =
     currentSong?.albumArt &&
     currentSong.albumArt !== "/images/vinyl-placeholder.svg";
-  const isPlaying = state === "playing";
-  const isLoading = state === "loading";
-
-  useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.crossOrigin = "anonymous";
-      audioRef.current.preload = "none";
-
-      audioRef.current.addEventListener("canplay", () => setState("playing"));
-      audioRef.current.addEventListener("playing", () => setState("playing"));
-      audioRef.current.addEventListener("loadstart", () => setState("loading"));
-      audioRef.current.addEventListener("waiting", () => setState("loading"));
-      audioRef.current.addEventListener("error", () => setState("error"));
-      audioRef.current.addEventListener("ended", () => setState("stopped"));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
-    }
-  }, [volume, isMuted]);
-
-  // Listen for external play trigger (from nav CTA)
-  useEffect(() => {
-    const handlePlayRequest = () => {
-      if (state === "stopped" || state === "error") {
-        togglePlay();
-      }
-    };
-    window.addEventListener("radio-play-request", handlePlayRequest);
-    return () => window.removeEventListener("radio-play-request", handlePlayRequest);
-  }, [state]);
-
-  const togglePlay = async () => {
-    if (!audioRef.current) return;
-
-    try {
-      if (isPlaying || isLoading) {
-        audioRef.current.pause();
-        setState("stopped");
-      } else {
-        if (audioRef.current.src !== streamUrl) {
-          audioRef.current.src = streamUrl;
-        }
-        setState("loading");
-        await audioRef.current.play();
-      }
-    } catch {
-      setState("error");
-    }
-  };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);

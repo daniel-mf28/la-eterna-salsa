@@ -86,6 +86,22 @@ function formatTimeAgo(dateStr: string): string {
   return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
 }
 
+function TimeAgo({ dateStr }: { dateStr: string }) {
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    setText(formatTimeAgo(dateStr));
+    const interval = setInterval(() => setText(formatTimeAgo(dateStr)), 60000);
+    return () => clearInterval(interval);
+  }, [dateStr]);
+
+  return (
+    <span className="font-sans text-xs text-[#5B7368]/60 flex-shrink-0 mt-1">
+      {text}
+    </span>
+  );
+}
+
 export function ShoutoutsCarousel() {
   const [shoutouts, setShoutouts] = useState<Shoutout[]>(FALLBACK_SHOUTOUTS);
   const [isLoading, setIsLoading] = useState(true);
@@ -228,10 +244,8 @@ export function ShoutoutsCarousel() {
                       </p>
                     </div>
 
-                    {/* Timestamp */}
-                    <span className="font-sans text-xs text-[#5B7368]/60 flex-shrink-0 mt-1">
-                      {formatTimeAgo(shoutout.createdAt)}
-                    </span>
+                    {/* Timestamp — client-only to avoid hydration mismatch */}
+                    <TimeAgo dateStr={shoutout.createdAt} />
                   </div>
                 ))}
               </div>
