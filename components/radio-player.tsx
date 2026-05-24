@@ -49,7 +49,7 @@ export function RadioPlayer() {
             <div className="absolute inset-[20%] rounded-full border border-[#0A3538]/13" style={{ borderColor: "rgba(10,53,56,0.13)" }} />
 
             {/* Center label - terracotta */}
-            <div className="absolute inset-[32%] rounded-full overflow-hidden bg-[#C2491F]">
+            <div className="absolute inset-[14%] rounded-full overflow-hidden bg-[#C2491F]">
               {hasAlbumArt ? (
                 <Image
                   src={currentSong!.albumArt!}

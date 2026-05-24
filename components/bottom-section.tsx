@@ -93,8 +93,8 @@ const fallbackFAQs: FAQ[] = [
 ]
 
 export function BottomSection() {
-    const [platforms, setPlatforms] = useState<PlatformLink[]>([])
-    const [faqItems, setFaqItems] = useState<FAQ[]>([])
+    const [platforms, setPlatforms] = useState<PlatformLink[]>(fallbackPlatforms)
+    const [faqItems, setFaqItems] = useState<FAQ[]>(fallbackFAQs)
     const [openFaq, setOpenFaq] = useState<string | null>('fallback-1')
 
     useEffect(() => {

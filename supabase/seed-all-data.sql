@@ -139,6 +139,41 @@ WHERE NOT EXISTS (
 );
 
 -- ============================================================================
+-- 4b. SEED FAQs
+-- ============================================================================
+INSERT INTO faqs (question, answer, display_order)
+SELECT question, answer, display_order FROM (VALUES
+  (
+    '1. ¿Cómo puedo escuchar La Eterna Salsa?',
+    'Puedes escucharnos directamente desde nuestra página web usando el reproductor en la página principal, o a través de plataformas como TuneIn y Radio.net.',
+    1
+  ),
+  (
+    '2. ¿Es gratis escuchar la radio?',
+    'Sí, La Eterna Salsa es completamente gratuita. No necesitas suscripción ni pago alguno.',
+    2
+  ),
+  (
+    '3. ¿Puedo pedir canciones o dedicatorias?',
+    'Sí, puedes enviarnos tus saludos y dedicatorias a través de nuestra sección de Shoutouts.',
+    3
+  ),
+  (
+    '4. ¿Desde dónde nos escuchas?',
+    'Nos puedes escuchar desde cualquier parte del mundo con conexión a internet.',
+    4
+  ),
+  (
+    '5. ¿Dónde puedo anunciarme en la emisora?',
+    'Contáctanos a través de nuestro correo electrónico para información sobre publicidad y anuncios en la emisora.',
+    5
+  )
+) AS new_faqs(question, answer, display_order)
+WHERE NOT EXISTS (
+  SELECT 1 FROM faqs WHERE faqs.question = new_faqs.question
+);
+
+-- ============================================================================
 -- 5. SEED CHAT MESSAGES (Sample)
 -- ============================================================================
 INSERT INTO chat_messages (username, message)
@@ -175,6 +210,7 @@ BEGIN
   RAISE NOTICE 'DJs: % records', (SELECT COUNT(*) FROM djs);
   RAISE NOTICE 'Shoutouts: % records', (SELECT COUNT(*) FROM shoutouts);
   RAISE NOTICE 'Platform Links: % records', (SELECT COUNT(*) FROM platform_links);
+  RAISE NOTICE 'FAQs: % records', (SELECT COUNT(*) FROM faqs);
   RAISE NOTICE 'Chat Messages: % records', (SELECT COUNT(*) FROM chat_messages);
   RAISE NOTICE 'Stickers: % records', (SELECT COUNT(*) FROM stickers);
   RAISE NOTICE 'Site Config: % records', (SELECT COUNT(*) FROM site_config);
