@@ -140,7 +140,7 @@ export function ShoutoutForm() {
               value={formData.name}
               onChange={handleChange}
               required
-              className="h-12 text-base"
+              className="h-14 text-base"
               maxLength={100}
             />
           </div>
@@ -159,7 +159,7 @@ export function ShoutoutForm() {
                 value={formData.city}
                 onChange={handleChange}
                 required
-                className="h-12 text-base"
+                className="h-14 text-base"
                 maxLength={100}
               />
             </div>
@@ -175,7 +175,7 @@ export function ShoutoutForm() {
                 value={formData.country}
                 onChange={handleChange}
                 required
-                className="h-12 text-base"
+                className="h-14 text-base"
                 maxLength={100}
               />
             </div>
@@ -214,7 +214,7 @@ export function ShoutoutForm() {
               placeholder="Ej: El Cantante - Héctor Lavoe"
               value={formData.songRequest}
               onChange={handleChange}
-              className="h-12 text-base"
+              className="h-14 text-base"
               maxLength={200}
             />
           </div>
