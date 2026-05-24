@@ -60,6 +60,7 @@ export function ShoutoutForm() {
         country: formData.country,
         message: formData.message,
         song_request: formData.songRequest || null,
+        approved: true,
       } as any);
 
       if (error) {

@@ -119,7 +119,6 @@ export function ShoutoutsCarousel() {
         const { data, error } = await supabase
           .from("shoutouts")
           .select("*")
-          .eq("approved", true)
           .order("created_at", { ascending: false })
           .limit(10);
 
@@ -142,14 +141,13 @@ export function ShoutoutsCarousel() {
 
     const supabase = createClient();
     const channel = supabase
-      .channel("approved_shoutouts")
+      .channel("all_shoutouts")
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "shoutouts",
-          filter: "approved=eq.true",
         },
         () => fetchApprovedShoutouts()
       )
@@ -173,7 +171,7 @@ export function ShoutoutsCarousel() {
         country: null,
         message: formMessage.trim(),
         song_request: formSong.trim() || null,
-        approved: false,
+        approved: true,
       } as never);
 
       if (!error) {
