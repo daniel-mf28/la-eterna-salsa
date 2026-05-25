@@ -87,17 +87,16 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 function TimeAgo({ dateStr }: { dateStr: string }) {
-  const [text, setText] = useState("");
+  const [, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    setText(formatTimeAgo(dateStr));
-    const interval = setInterval(() => setText(formatTimeAgo(dateStr)), 60000);
+    const interval = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(interval);
-  }, [dateStr]);
+  }, []);
 
   return (
     <span className="font-sans text-xs text-[#5B7368]/60 flex-shrink-0 mt-1">
-      {text}
+      {formatTimeAgo(dateStr)}
     </span>
   );
 }
@@ -210,12 +209,12 @@ export function ShoutoutsCarousel() {
                 Saludos y Dedicatorias
               </h3>
 
-              <div className="space-y-0">
-                {shoutouts.slice(0, 4).map((shoutout, index) => (
+              <div className="max-h-[300px] md:max-h-[360px] overflow-y-auto pr-2 md:pr-3 -mr-2 md:-mr-3 space-y-0">
+                {shoutouts.map((shoutout, index) => (
                   <div
                     key={`${shoutout.id}-${index}`}
                     className={`flex items-start gap-3 pb-3 pt-3 first:pt-0 ${
-                      index < 3 ? "border-b border-[#C7C0AF]/40" : ""
+                      index < shoutouts.length - 1 ? "border-b border-[#C7C0AF]/40" : ""
                     }`}
                   >
                     {/* Avatar */}
@@ -237,7 +236,7 @@ export function ShoutoutsCarousel() {
                           </span>
                         )}
                       </div>
-                      <p className="font-sans text-sm text-[#5B7368] mt-0.5 line-clamp-1">
+                      <p className="font-sans text-sm leading-relaxed text-[#5B7368] mt-0.5 whitespace-normal break-words">
                         {shoutout.message}
                       </p>
                     </div>
