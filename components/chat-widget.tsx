@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Send, Smile, Image as ImageIcon, Trash2, MessageCircle, Users } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Send, Smile, Image as ImageIcon, Trash2, MessageCircle } from "lucide-react";
 import { GiphyPicker } from "./giphy-picker";
 import { StickerPicker } from "./sticker-picker";
 import { createClient } from "@/lib/supabase";
+import type { Database } from "@/lib/database.types";
+
+type ChatMessageRow = Database["public"]["Tables"]["chat_messages"]["Row"];
+type ChatMessageInsert = Database["public"]["Tables"]["chat_messages"]["Insert"];
 
 interface Message {
   id: string;
@@ -14,6 +18,15 @@ interface Message {
   type: "text" | "gif" | "sticker";
   mediaUrl?: string;
 }
+
+const toMessage = (msg: ChatMessageRow): Message => ({
+  id: msg.id,
+  username: msg.username,
+  content: msg.message || "",
+  timestamp: new Date(msg.created_at),
+  type: msg.gif_url ? "gif" : msg.sticker_url ? "sticker" : "text",
+  mediaUrl: msg.gif_url || msg.sticker_url || undefined,
+});
 
 export function ChatWidget() {
   const [username, setUsername] = useState<string>("");
@@ -25,50 +38,9 @@ export function ChatWidget() {
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    const storedUsername = localStorage.getItem("chat_username");
-    if (storedUsername) setUsername(storedUsername);
-
-    const cookies = document.cookie.split(";");
-    const hasAdminAuth = cookies.some((cookie) =>
-      cookie.trim().startsWith("admin_auth=")
-    );
-    setIsAdmin(hasAdminAuth);
-
-    loadMessages();
-
-    const supabase = createClient();
-    const channel = supabase
-      .channel("chat_messages_changes")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages" },
-        (payload) => {
-          const newMessage = payload.new;
-          const message: Message = {
-            id: newMessage.id,
-            username: newMessage.username,
-            content: newMessage.message || "",
-            timestamp: new Date(newMessage.created_at),
-            type: newMessage.gif_url ? "gif" : newMessage.sticker_url ? "sticker" : "text",
-            mediaUrl: newMessage.gif_url || newMessage.sticker_url,
-          };
-
-          setMessages((prev) => {
-            if (prev.some((msg) => msg.id === message.id)) return prev;
-            return [...prev, message];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("chat_messages")
@@ -77,17 +49,63 @@ export function ChatWidget() {
       .limit(50);
 
     if (!error && data && Array.isArray(data)) {
-      const loadedMessages: Message[] = data.map((msg: any) => ({
-        id: msg.id,
-        username: msg.username,
-        content: msg.message || "",
-        timestamp: new Date(msg.created_at),
-        type: msg.gif_url ? "gif" : msg.sticker_url ? "sticker" : "text",
-        mediaUrl: msg.gif_url || msg.sticker_url,
-      }));
-      setMessages(loadedMessages);
+      const loadedMessages: Message[] = data.map(toMessage);
+      // Replace all messages; filter out optimistic ones now confirmed by server
+      setMessages((prev) => {
+        const optimistic = prev.filter((msg) => msg.id.startsWith("optimistic-"));
+        if (optimistic.length === 0) return loadedMessages;
+        // Keep optimistic messages not yet confirmed by server
+        const serverIds = new Set(loadedMessages.map((m) => m.content + m.username));
+        const stillPending = optimistic.filter(
+          (msg) => !serverIds.has(msg.content + msg.username)
+        );
+        return [...loadedMessages, ...stillPending];
+      });
     }
-  };
+  }, []);
+
+  // Initial setup: restore local state, load chat, then keep it current with Realtime.
+  useEffect(() => {
+    const storedUsername = localStorage.getItem("chat_username");
+    if (storedUsername) {
+      queueMicrotask(() => setUsername(storedUsername));
+    }
+
+    const cookies = document.cookie.split(";");
+    const hasAdminAuth = cookies.some((cookie) =>
+      cookie.trim().startsWith("admin_auth=")
+    );
+    queueMicrotask(() => setIsAdmin(hasAdminAuth));
+
+    queueMicrotask(() => {
+      loadMessages();
+    });
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel("public_chat_messages")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "chat_messages" },
+        () => {
+          loadMessages();
+        }
+      )
+      .subscribe();
+
+    pollingRef.current = setInterval(() => {
+      loadMessages();
+    }, 60000);
+
+    return () => {
+      supabase.removeChannel(channel);
+
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [loadMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -108,33 +126,52 @@ export function ChatWidget() {
     e.preventDefault();
     if (!inputMessage.trim() || !username) return;
 
+    const messageText = inputMessage.trim();
+    const optimisticId = `optimistic-${Date.now()}`;
+
+    // Optimistic insert — show immediately
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: optimisticId,
+        username,
+        content: messageText,
+        timestamp: new Date(),
+        type: "text",
+      },
+    ]);
+    setInputMessage("");
+
     const supabase = createClient();
+    const messageInsert: ChatMessageInsert = { username, message: messageText };
     const { error } = await supabase
       .from("chat_messages")
-      .insert({ username, message: inputMessage.trim() } as any);
+      .insert(messageInsert as never);
 
     if (error) {
       console.error("Error sending message:", error);
-      return;
+      // Remove optimistic message on failure
+      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId));
     }
-    setInputMessage("");
   };
 
   const handleGifSelect = async (gifUrl: string) => {
     if (!username) return;
     const supabase = createClient();
+    const messageInsert: ChatMessageInsert = { username, message: "", gif_url: gifUrl };
     const { error } = await supabase
       .from("chat_messages")
-      .insert({ username, message: "", gif_url: gifUrl } as any);
+      .insert(messageInsert as never);
     if (!error) setShowGiphyPicker(false);
   };
 
   const handleStickerSelect = async (stickerUrl: string) => {
     if (!username) return;
     const supabase = createClient();
+    const messageInsert: ChatMessageInsert = { username, message: "", sticker_url: stickerUrl };
     const { error } = await supabase
       .from("chat_messages")
-      .insert({ username, message: "", sticker_url: stickerUrl } as any);
+      .insert(messageInsert as never);
     if (!error) setShowStickerPicker(false);
   };
 
