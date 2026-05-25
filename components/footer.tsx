@@ -19,7 +19,7 @@ const platformIcons: Record<string, React.ComponentType<{ className?: string }>>
 }
 
 const fallbackSocialLinks: SocialLink[] = [
-    { id: 'fallback-1', platform: 'facebook', url: 'https://facebook.com/laeternasalsa', created_at: new Date().toISOString() },
+    { id: 'fallback-1', platform: 'facebook', url: 'https://www.facebook.com/groups/474578099219530/', created_at: new Date().toISOString() },
     { id: 'fallback-2', platform: 'instagram', url: 'https://instagram.com/laeternasalsa', created_at: new Date().toISOString() },
     { id: 'fallback-3', platform: 'youtube', url: 'https://youtube.com/@laeternasalsa', created_at: new Date().toISOString() },
     { id: 'fallback-4', platform: 'twitter', url: 'https://twitter.com/laeternasalsa', created_at: new Date().toISOString() },

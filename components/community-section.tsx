@@ -46,7 +46,7 @@ export function CommunitySection() {
 
                         {/* Button */}
                         <Link
-                            href="#"
+                            href="https://www.facebook.com/groups/474578099219530/"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-shrink-0 font-sans font-bold text-white bg-[#0A3538] border-2 border-white rounded-xl uppercase hover:bg-[#0A3538]/80 transition-colors text-[14px] md:text-[16px] px-6 py-3 md:px-9 md:py-4"
