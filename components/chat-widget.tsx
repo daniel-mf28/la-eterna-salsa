@@ -45,11 +45,11 @@ export function ChatWidget() {
     const { data, error } = await supabase
       .from("chat_messages")
       .select("*")
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(50);
 
     if (!error && data && Array.isArray(data)) {
-      const loadedMessages: Message[] = data.map(toMessage);
+      const loadedMessages: Message[] = data.reverse().map(toMessage);
       // Replace all messages; filter out optimistic ones now confirmed by server
       setMessages((prev) => {
         const optimistic = prev.filter((msg) => msg.id.startsWith("optimistic-"));
